@@ -1,0 +1,113 @@
+# Text-Speech API (TTS + STT)
+
+A **FastAPI** backend for natural speech synthesis and high-accuracy transcription, featuring safety filtering and secure user management.
+
+---
+
+## Features
+- **🔊 TTS**: Natural speech generation via **Bark (Suno)**.
+- **🗣️ STT**: Fast transcription via **faster-whisper**.
+- **🛡️ Safety**: Integrated toxicity filtering (Detoxify).
+- **🔐 Secure**: JWT-based OAuth2 authentication.
+- **🗄️ Async DB**: SQLModel with MySQL for user/auth management.
+
+---
+
+## Project Structure
+
+
+```text
+.
+├── audio/                 # Uploaded audio files (STT input)
+├── outputs/               # Generated audio files (TTS output)
+├── main.py                # FastAPI entry point
+├── pyproject.toml
+├── README.md
+└── src/
+    ├── Database/          # Database models & configuration
+    ├── repositories/      # Data access logic (auth, user)
+    ├── routes/            # API endpoints (auth, user)
+    ├── schema/            # Pydantic validation models
+    ├── security/          # OAuth2 & security logic
+    ├── services/          # Business logic (auth, user)
+    ├── speech_to_text.py  # STT implementation
+    ├── text_to_speech.py  # TTS implementation
+    └── utils/             # Hashing & text verification
+```
+---
+
+## Tech Stack
+- **Framework**: FastAPI
+- **Models**: Bark (TTS), faster-whisper (STT), Detoxify (Safety)
+- **Database**: MySQL (Async via SQLModel)
+- **Auth**: JWT (OAuth2)
+
+## API Endpoints
+
+### Authentication
+* **POST** `/register` — Create a new account
+* **POST** `/login` — Get access token
+* **GET** `/get-current-user` — Verify session
+
+### Text to Speech
+**POST** `/text-to-speech` (Requires Bearer Token)
+
+**Request Body:**
+```json
+{
+  "input_text": "Hello world",
+  "lang_index": 0 
+}
+```
+
+### Speech to Text
+**POST** `/speech-to-text` (Requires Bearer Token)
+
+**Body:** `file` (Form Data)
+
+## Setup & Installation
+
+### 1. Prerequisites
+- **Python 3.12+**
+- **uv**: [Install uv](https://github.com) (`curl -LsSf https://astral.sh | sh`)
+- **FFmpeg**: Required for audio processing.
+- **CUDA** (Optional): Recommended for GPU acceleration.
+
+### 2. Installation
+Clone the repository
+```bash
+git clone https://github.com/yash2k02/Text-Speech.git
+cd Text-Speech
+```
+Install dependencies using uv
+```
+uv sync
+```
+
+### 3. Environment Configuration
+Create a .env file in the root directory based on this template
+```bash
+# Database Configuration
+MY_SQL_USER=your_user
+MY_SQL_PASSWORD=your_password
+MY_SQL_HOST=localhost
+MY_SQL_PORT=3306
+MY_SQL_DB=your_db
+
+# Authentication (JWT)
+LOGIN_SECRET_KEY=your_super_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Model & Storage Settings
+WHISPER_MODEL_SIZE=base        # e.g., tiny, base, small, medium, large
+BASE_AUDIO_DIR=./audio
+BASE_OUTPUT_DIR=./outputs
+TOXICITY_THRESHOLD=0.3
+```
+
+### 4. Run the Application
+```bash
+uv run uvicorn main:app --reload
+```
+
