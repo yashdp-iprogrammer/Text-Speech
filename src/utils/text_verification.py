@@ -11,7 +11,7 @@ def get_model():
         _model = Detoxify("original", device="cpu")
     return _model
 
-def verify_prompt(text: str) -> bool:
+def verify_text(text: str) -> bool:
     """
     Returns True if text is safe, False if toxic.
     """

@@ -10,6 +10,7 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 - **🛡️ Safety**: Integrated toxicity filtering (Detoxify).
 - **🔐 Secure**: JWT-based OAuth2 authentication.
 - **🗄️ Async DB**: SQLModel with MySQL for user/auth management.
+- **🎨 UI Support**: Interactive frontend using **Streamlit** for better user experience.
 
 ---
 
@@ -20,6 +21,7 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 .
 ├── audio/                 # Uploaded audio files (STT input)
 ├── outputs/               # Generated audio files (TTS output)
+├── app.py                 # Streamlit UI application
 ├── main.py                # FastAPI entry point
 ├── pyproject.toml
 ├── README.md
@@ -38,6 +40,7 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 
 ## Tech Stack
 - **Framework**: FastAPI
+- **Frontend/UI**: Streamlit
 - **Models**: Bark (TTS), faster-whisper (STT), Detoxify (Safety)
 - **Database**: MySQL (Async via SQLModel)
 - **Auth**: JWT (OAuth2)
@@ -106,8 +109,22 @@ BASE_OUTPUT_DIR=./outputs
 TOXICITY_THRESHOLD=0.3
 ```
 
-### 4. Run the Application
+<!-- ### 4. Run the Application
 ```bash
 uv run uvicorn main:app --reload
+``` -->
+
+### 4. Run Streamlit UI
+```bash
+streamlit run app.py
 ```
 
+## Notes
+ - TTS → STT is not lossless. The transcribed text may differ slightly from the original input.
+Ensure FFmpeg is installed for audio conversion.
+ - For GPU usage, install proper CUDA libraries; otherwise, CPU fallback works fine.
+ - This version works directly with 
+
+
+ > Currently, Streamlit directly calls backend functions (TTS/STT) instead of communicating via FastAPI endpoints. Integration via API (Streamlit ↔ FastAPI over HTTP) will be added later.  
+ > The APIs can still be accessed and tested independently using tools like Postman or via the built-in Swagger UI.

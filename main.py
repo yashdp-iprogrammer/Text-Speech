@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from src.schema.schemas import TextToSpeech
-from src.utils.text_verification import verify_prompt
+# from src.utils.text_verification import verify_text
 from src.security.o_auth import auth_dependency
 from src.text_to_speech import text_to_speech
 from fastapi import File, UploadFile
@@ -18,6 +18,7 @@ async def lifespan(app: FastAPI):
     yield
     
 app = FastAPI(title="Text-to-Speech", lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,11 +48,11 @@ async def text_to_speech_api(user: current_user, request: TextToSpeech):
         if not request.input_text:
             raise HTTPException(status_code=400, detail="Input text is required")
 
-        if not verify_prompt(request.input_text):
-            raise HTTPException(
-                status_code=400,
-                detail="Input contains unsafe/NSFW content"
-            )
+        # if not verify_text(request.input_text):
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Input contains unsafe/NSFW content"
+        #     )
 
         # Generate speech
         result = text_to_speech(
