@@ -25,6 +25,7 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 ├── main.py                # FastAPI entry point
 ├── pyproject.toml
 ├── README.md
+├── .env.example           # Environment variables template (copy to .env and fill credentials)
 └── src/
     ├── Database/          # Database models & configuration
     ├── repositories/      # Data access logic (auth, user)
@@ -88,26 +89,7 @@ uv sync
 ```
 
 ### 3. Environment Configuration
-Create a .env file in the root directory based on this template
-```bash
-# Database Configuration
-MY_SQL_USER=your_user
-MY_SQL_PASSWORD=your_password
-MY_SQL_HOST=localhost
-MY_SQL_PORT=3306
-MY_SQL_DB=your_db
-
-# Authentication (JWT)
-LOGIN_SECRET_KEY=your_super_secret_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# Model & Storage Settings
-WHISPER_MODEL_SIZE=base        # e.g., tiny, base, small, medium, large
-BASE_AUDIO_DIR=./audio
-BASE_OUTPUT_DIR=./outputs
-TOXICITY_THRESHOLD=0.3
-```
+Copy the .env.example file to .env and update it with your own credentials.
 
 <!-- ### 4. Run the Application
 ```bash
@@ -123,7 +105,6 @@ streamlit run app.py
  - TTS → STT is not lossless. The transcribed text may differ slightly from the original input.
 Ensure FFmpeg is installed for audio conversion.
  - For GPU usage, install proper CUDA libraries; otherwise, CPU fallback works fine.
- - This version works directly with 
 
 
  > Currently, Streamlit directly calls backend functions (TTS/STT) instead of communicating via FastAPI endpoints. Integration via API (Streamlit ↔ FastAPI over HTTP) will be added later.  

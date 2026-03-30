@@ -1,7 +1,7 @@
 import os
 import uuid
 import numpy as np
-import regex
+# import regex
 import torch
 import scipy.io.wavfile as wavfile
 from transformers import AutoProcessor, BarkModel
@@ -32,6 +32,7 @@ def load_model():
     if processor is None or model is None:
         processor = AutoProcessor.from_pretrained("suno/bark")
         model = BarkModel.from_pretrained("suno/bark").to(device)
+        model.eval()
 
 
 VOICE_OPTIONS = [
@@ -44,39 +45,59 @@ VOICE_OPTIONS = [
 ]
 
 
-def split_text(text: str):
-    """Split text into smaller segments for better audio generation."""
-    segments = [seg.strip() for seg in regex.split(r"[,.]", text) if seg.strip()]
-    return segments
-
-
 def generate_audio_array(text: str, language: int):
     load_model()
 
     if language >= len(VOICE_OPTIONS):
         raise ValueError("Invalid language index")
 
-    audio_segments = []
+    # audio_segments = []
 
-    for segment in split_text(text):
-        try:
-            inputs = processor(
-                segment,
-                voice_preset=VOICE_OPTIONS[language],
-                return_tensors="pt"
-            ).to(device)
+    # for segment in split_text(text):
+    #     try:
+    #         inputs = processor(
+    #             segment,
+    #             voice_preset=VOICE_OPTIONS[language],
+    #             return_tensors="pt"
+    #         ).to(device)
 
-            audio = model.generate(**inputs, min_eos_p=0.05)
-            audio_segments.append(audio.squeeze().cpu().numpy())
+    #         audio = model.generate(**inputs, min_eos_p=0.05)
+    #         audio_segments.append(audio.squeeze().cpu().numpy())
 
-        except Exception as e:
-            raise RuntimeError(f"Error generating audio: {str(e)}")
+    #     except Exception as e:
+    #         raise RuntimeError(f"Error generating audio: {str(e)}")
+    
+    
+    # try:
+    #     with torch.no_grad():  # ✅ huge optimization
+    #         for segment in split_text(text):
+    #             inputs = processor(
+    #                 segment,
+    #                 voice_preset=VOICE_OPTIONS[language],
+    #                 return_tensors="pt"
+    #             ).to(device)
 
-    if not audio_segments:
-        raise ValueError("No audio generated from input text")
+    #             audio = model.generate(**inputs,min_eos_p=0.05)
+    #             audio_segments.append(audio.squeeze().cpu().numpy())
 
-    return np.concatenate(audio_segments)
+    # except Exception as e:
+    #     raise RuntimeError(f"Error generating audio: {str(e)}")
 
+    # if not audio_segments:
+    #     raise ValueError("No audio generated from input text")
+
+    # return np.concatenate(audio_segments)
+    
+    inputs = processor(
+                    text,
+                    voice_preset=VOICE_OPTIONS[language],
+                    return_tensors="pt"
+                ).to(device)
+
+    audio = model.generate(**inputs)
+    audio_array = audio.squeeze().cpu().numpy()
+
+    return audio_array
 
 def save_audio_file(email: str, audio_array: np.ndarray):
     os.makedirs(BASE_OUTPUT_DIR, exist_ok=True)
@@ -134,36 +155,6 @@ def save_audio_file(email: str, audio_array: np.ndarray):
 #         raise RuntimeError(f"S3 upload failed: {str(e)}")
 
 
-# def text_to_speech(email: str, text: str, language: int):
-#     """
-#     Main function to generate speech and upload to S3.
-#     Returns: public URL
-#     """
-#     if not verify_text(text):
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail="Input contains unsafe/NSFW content"
-#             )
-
-#     try:
-#         audio_array = generate_audio_array(text, language)
-#         print(audio_array[:10])
-#         print(audio_array.max(), audio_array.min())
-#         file_path = save_audio_file(email, audio_array)
-#         # url = upload_to_s3(file_path, email)
-
-#         return {
-#             "status": "success",
-#             "audio_url": file_path
-#         }
-
-#     except Exception as e:
-#         return {
-#             "status": "error",
-#             "message": str(e)
-#         }
-
-
 def text_to_speech(email: str, text: str, language: int):
     # if not verify_text(text):
     #     raise HTTPException(status_code=400, detail="Unsafe content")
@@ -171,6 +162,7 @@ def text_to_speech(email: str, text: str, language: int):
     try:
         audio_array = generate_audio_array(text, language)
         file_path = save_audio_file(email, audio_array)
+        # url = upload_to_s3(file_path, email)
 
         return {
             "status": "success",

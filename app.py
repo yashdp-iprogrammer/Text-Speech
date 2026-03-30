@@ -91,7 +91,7 @@ else:
                     if "Unsafe content" in error_msg:
                         st.warning("⚠️ Your input contains unsafe or toxic content. Please modify your audio file.")
                     else:
-                        st.error("❌ Something went wrong during transcription/")
+                        st.error(f"❌ Something went wrong during transcription, {error_msg}")
 
 # --- Footer ---
 st.sidebar.markdown("---")
