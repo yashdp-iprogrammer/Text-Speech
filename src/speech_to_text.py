@@ -2,7 +2,7 @@ import os
 import uuid
 import torch
 from src.utils.text_verification import verify_text
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel 
 from fastapi import HTTPException
 
 
@@ -39,36 +39,6 @@ def save_audio_file(file):
 # =========================
 # Speech to Text
 # =========================
-# def speech_to_text(file):
-#     try:
-#         model = get_model()
-#         file_path = save_audio_file(file)
-
-#         segments, _ = model.transcribe(file_path)
-
-#         text = ""
-#         for segment in segments:
-#             text += segment.text + " "
-
-
-#         if not verify_text(text):
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail="Input contains unsafe/NSFW content"
-#             )
-            
-#         return {
-#             "status": "success",
-#             "text": text.strip()
-#         }
-
-#     except Exception as e:
-#         return {
-#             "status": "error",
-#             "message": str(e)
-#         }
-
-
 def speech_to_text(file):
     try:
         model = get_model()
@@ -78,7 +48,7 @@ def speech_to_text(file):
         if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(status_code=400, detail="Unsupported file format")
 
-        segments, _ = model.transcribe(file_path)
+        segments, _ = model.transcribe(file_path, task="translate",temperature=0)
 
         text = " ".join(segment.text for segment in segments)
 
