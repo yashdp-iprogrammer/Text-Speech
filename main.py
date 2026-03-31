@@ -72,7 +72,7 @@ async def text_to_speech_api(user: current_user, request: TextToSpeech):
 
 
 @app.post("/speech-to-text", tags=["Speech-to-Text"])
-async def speech_to_text_api(file: UploadFile = File(...)):
+async def speech_to_text_api(user:current_user, file: UploadFile = File(...)):
     try:
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file uploaded")
