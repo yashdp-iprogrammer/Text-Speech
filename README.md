@@ -6,8 +6,10 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 
 ## Features
 
-- **Text to Speech** — Natural, multilingual audio generation via [Suno Bark](https://github.com/suno-ai/bark)
-- **Speech to Text** — Fast, accurate transcription via [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (with auto-translation to English)
+- **Text to Speech** — Natural, multilingual audio generation via [Suno Bark](https://github.com/suno-ai/bark) or [Groq API](https://console.groq.com/keys) *(quick testing)*
+- **Speech to Text** — Fast, accurate transcription via [faster-whisper](https://github.com/SYSTRAN/faster-whisper) or [Groq API](https://console.groq.com/keys) *(quick testing)*
+  - ⚠️ **Pre-recorded audio files only** — This version supports uploading and transcribing pre-recorded audio files
+  - 🎤 **Looking for real-time STT?** Check the [`realtime-stt`](https://github.com/yash2k02/Text-Speech/tree/realtime-stt) branch for live audio recording
 - **Safety Filtering** — Toxicity detection on both input text and transcribed output via [Detoxify](https://github.com/unitaryai/detoxify)
 - **Auth** — JWT-based OAuth2 authentication for protected endpoints
 - **Async DB** — SQLModel + MySQL for user and auth management
@@ -21,8 +23,8 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 |---|---|
 | API Framework | FastAPI |
 | UI | Streamlit |
-| TTS Model | Suno Bark (`suno/bark`) |
-| STT Model | faster-whisper |
+| TTS Model | Suno Bark (`suno/bark`) or orpheus-v1-english(Groq API) |
+| STT Model | faster-whisper or Whisper (Groq API) |
 | Safety | Detoxify |
 | Auth | JWT (python-jose) + OAuth2 |
 | Database | MySQL (async via SQLModel + aiomysql) |
@@ -135,7 +137,7 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
 
 **Request:** multipart form with `file` field. Accepted formats: `.wav`, `.mp3`, `.m4a`, `.flac`
 
-> **Note:** The STT endpoint transcribes audio and translates it to English using `task="translate"`. Output is filtered for toxicity before being returned.
+> **Note:** This version supports **pre-recorded audio files only**. The STT endpoint transcribes uploaded audio files and translates the output to English using `task="translate"`. All transcribed text is filtered for toxicity before being returned.
 
 **Response:**
 ```json
@@ -144,6 +146,8 @@ A **FastAPI** backend for natural speech synthesis and high-accuracy transcripti
   "text": "transcribed text here"
 }
 ```
+
+> ⚠️ **Real-time Speech-to-Text:** For live audio recording and real-time transcription capabilities, please check out the [`feature/realtime-stt`](https://github.com/yash2k02/Text-Speech/tree/feature/realtime-stt) branch.
 
 ---
 
@@ -198,6 +202,9 @@ MY_SQL_DB=your_db_name
 BASE_OUTPUT_DIR=./outputs
 BASE_AUDIO_DIR=./audio
 
+# Groq API (for quick testing - get free key at https://console.groq.com/keys)
+GROQ_API_KEY=your_groq_api_key_here
+
 # Whisper Model (tiny / base / small / medium / large-v3)
 WHISPER_MODEL_SIZE=large-v3
 
@@ -225,8 +232,8 @@ uv run streamlit run app.py
 
 ## Notes
 
+- **Groq API for Quick Testing** — Both `text_to_speech.py` and `speech_to_text.py` include Groq API implementations for rapid prototyping. Simply switch the active implementation to use Groq's hosted models instead of local ones. Requires a free [Groq API key](https://console.groq.com/keys).
 - **TTS output is not lossless for STT.** Transcribing Bark-generated audio may produce slightly different text than the original input — this is expected behaviour from the model.
 - **Whisper translates to English.** The STT endpoint uses `task="translate"`, so all audio regardless of source language is transcribed in English.
 - **Bark is slow on CPU.** The first TTS request also triggers model loading. A GPU with CUDA is strongly recommended for production use.
 - **Detoxify runs on CPU** regardless of GPU availability, to keep memory usage predictable.
-- **AWS S3 upload** is implemented but currently commented out. The `boto3` dependency is included — uncomment the relevant code in `text_to_speech.py` and add S3 env vars to enable cloud storage.

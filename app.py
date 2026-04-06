@@ -1,13 +1,17 @@
 import streamlit as st
 from src.text_to_speech import text_to_speech, VOICE_OPTIONS
 from src.speech_to_text import speech_to_text
+import asyncio
 
 # --- Wrapper for Speech-to-Text compatibility ---
 class StreamlitFileWrapper:
-    """Wraps Streamlit UploadedFile to match the backend's expected object structure"""
+    """Wraps Streamlit UploadedFile to match async read interface"""
     def __init__(self, uploaded_file):
         self.file = uploaded_file
         self.filename = uploaded_file.name
+
+    async def read(self):
+        return self.file.read()
 
 # --- Page Configuration ---
 st.set_page_config(page_title="Text-Speech")
@@ -19,7 +23,8 @@ mode = st.sidebar.selectbox("Choose Mode", ["Text to Speech", "Speech to Text"])
 # --- Mode 1: Text to Speech ---
 if mode == "Text to Speech":
     st.header("Text to Speech")
-    st.info("Using Suno Bark model for high-quality generation.")
+    # st.info("Using Suno Bark model for high-quality generation.")
+    st.info("Using orpheus-v1-english model for high-quality generation.")
 
     # Language/Voice Selection
     # VOICE_OPTIONS are imported from your backend file
@@ -41,6 +46,7 @@ if mode == "Text to Speech":
 
                     if result["status"] == "success":
                         st.success("Generation complete!")
+                        st.info(f"⏱️ Time taken: {result.get('time_taken', 'N/A')} sec")
                         st.audio(result["audio_url"])
 
                         with open(result["audio_url"], "rb") as f:
@@ -52,13 +58,24 @@ if mode == "Text to Speech":
                         else:
                             st.error(f"❌ Error: {result['message']}")
 
+                # except Exception as e:
+                #     error_msg = str(e)
+
+                #     if "Unsafe content" in error_msg:
+                #         st.warning("⚠️ Your input contains unsafe or toxic content. Please modify your text.")
+                #     else:
+                #         st.error("❌ Something went wrong while generating audio.")
+                
+
                 except Exception as e:
+                    import traceback
                     error_msg = str(e)
 
                     if "Unsafe content" in error_msg:
                         st.warning("⚠️ Your input contains unsafe or toxic content. Please modify your text.")
                     else:
-                        st.error("❌ Something went wrong while generating audio.")
+                        st.error(f"❌ {error_msg}")  # ✅ show actual error
+                        st.text(traceback.format_exc())  # 🔥 full stack trace
 
 # --- Mode 2: Speech to Text ---
 else:
@@ -74,10 +91,12 @@ else:
             with st.spinner("Transcribing..."):
                 try:
                     wrapped_file = StreamlitFileWrapper(uploaded_file)
-                    result = speech_to_text(wrapped_file)
+                    # result = speech_to_text(wrapped_file)
+                    result = asyncio.run(speech_to_text(wrapped_file))
 
                     if result["status"] == "success":
                         st.subheader("Transcription:")
+                        st.info(f"⏱️ Time taken: {result.get('time_taken', 'N/A')} seconds")
                         st.write(result["text"])
 
                         st.download_button("Download Text", result["text"], file_name="transcription.txt")

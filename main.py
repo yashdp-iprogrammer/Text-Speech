@@ -77,7 +77,7 @@ async def speech_to_text_api(user:current_user, file: UploadFile = File(...)):
         if not file.filename:
             raise HTTPException(status_code=400, detail="No file uploaded")
 
-        result = speech_to_text(file)
+        result = await speech_to_text(file)
 
         if result["status"] == "error":
             raise HTTPException(status_code=500, detail=result["message"])

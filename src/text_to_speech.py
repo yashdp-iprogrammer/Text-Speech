@@ -1,172 +1,209 @@
+# import os
+# import uuid
+# import numpy as np
+# import torch
+# import scipy.io.wavfile as wavfile
+# from transformers import AutoProcessor, BarkModel
+# from pydub import AudioSegment
+# from dotenv import load_dotenv
+# # from src.utils.text_verification import verify_text
+# from fastapi import HTTPException
+# import time
+
+# # Load env variables
+# load_dotenv()
+
+
+# BASE_OUTPUT_DIR = os.getenv("BASE_OUTPUT_DIR", "./outputs")
+
+# processor = None
+# model = None
+# device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+# def load_model():
+#     global processor, model
+#     if processor is None or model is None:
+#         processor = AutoProcessor.from_pretrained("suno/bark")
+#         model = BarkModel.from_pretrained("suno/bark").to(device)
+#         model.eval()
+
+
+# VOICE_OPTIONS = [
+#     "v2/en_speaker_6", "v2/en_speaker_9",
+#     "v2/zh_speaker_0", "v2/zh_speaker_9",
+#     "v2/fr_speaker_0", "v2/fr_speaker_1",
+#     "v2/de_speaker_0", "v2/de_speaker_3",
+#     "v2/hi_speaker_2", "v2/hi_speaker_0",
+#     "v2/ja_speaker_2", "v2/ja_speaker_0",
+# ]
+
+
+# def generate_audio_array(text: str, language: int):
+#     load_model()
+
+#     if language >= len(VOICE_OPTIONS):
+#         raise ValueError("Invalid language index")
+
+#     # audio_segments = []
+
+#     # for segment in split_text(text):
+#     #     try:
+#     #         inputs = processor(
+#     #             segment,
+#     #             voice_preset=VOICE_OPTIONS[language],
+#     #             return_tensors="pt"
+#     #         ).to(device)
+
+#     #         audio = model.generate(**inputs, min_eos_p=0.05)
+#     #         audio_segments.append(audio.squeeze().cpu().numpy())
+
+#     #     except Exception as e:
+#     #         raise RuntimeError(f"Error generating audio: {str(e)}")
+    
+    
+#     # try:
+#     #     with torch.no_grad():  # ✅ huge optimization
+#     #         for segment in split_text(text):
+#     #             inputs = processor(
+#     #                 segment,
+#     #                 voice_preset=VOICE_OPTIONS[language],
+#     #                 return_tensors="pt"
+#     #             ).to(device)
+
+#     #             audio = model.generate(**inputs,min_eos_p=0.05)
+#     #             audio_segments.append(audio.squeeze().cpu().numpy())
+
+#     # except Exception as e:
+#     #     raise RuntimeError(f"Error generating audio: {str(e)}")
+
+#     # if not audio_segments:
+#     #     raise ValueError("No audio generated from input text")
+
+#     # return np.concatenate(audio_segments)
+    
+#     inputs = processor(
+#                     text,
+#                     voice_preset=VOICE_OPTIONS[language],
+#                     return_tensors="pt"
+#                 ).to(device)
+
+#     audio = model.generate(**inputs)
+#     audio_array = audio.squeeze().cpu().numpy()
+
+#     return audio_array
+
+# def save_audio_file(email: str, audio_array: np.ndarray):
+#     os.makedirs(BASE_OUTPUT_DIR, exist_ok=True)
+
+#     unique_id = str(uuid.uuid4())
+#     wav_path = os.path.join(BASE_OUTPUT_DIR, f"{unique_id}.wav")
+#     mp3_path = os.path.join(BASE_OUTPUT_DIR, f"{unique_id}.mp3")
+
+#     try:
+#         sample_rate = model.generation_config.sample_rate
+
+#         # Save WAV
+#         wavfile.write(wav_path, rate=sample_rate, data=audio_array)
+
+#         # Convert to MP3
+#         sound = AudioSegment.from_wav(wav_path)
+#         sound.export(mp3_path, format="mp3")
+
+#         # Remove temp wav
+#         os.remove(wav_path)
+
+#         return mp3_path
+
+#     except Exception as e:
+#         raise RuntimeError(f"Error saving audio: {str(e)}")
+
+
+
+# def text_to_speech(email: str, text: str, language: int):
+#     # if not verify_text(text):
+#     #     raise HTTPException(status_code=400, detail="Unsafe content")
+
+#     try:
+#         start_time = time.perf_counter()
+
+#         audio_array = generate_audio_array(text, language)
+#         file_path = save_audio_file(email, audio_array)
+
+#         end_time = time.perf_counter()
+#         time_taken = round(end_time - start_time, 2)
+
+#         return {
+#             "status": "success",
+#             "audio_url": file_path,
+#             "time_taken": time_taken
+#         }
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===================================== GROQ VERSION ====================================================================
+
+
 import os
 import uuid
-import numpy as np
-# import regex
-import torch
-import scipy.io.wavfile as wavfile
-from transformers import AutoProcessor, BarkModel
-from pydub import AudioSegment
-# import boto3
-# from botocore.client import Config
+from groq import Groq
 from dotenv import load_dotenv
-# from src.utils.text_verification import verify_text
 from fastapi import HTTPException
+import time
 
-# Load env variables
 load_dotenv()
 
-
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 BASE_OUTPUT_DIR = os.getenv("BASE_OUTPUT_DIR", "./outputs")
-# AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
-# AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-# AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
-# BUCKET_NAME = os.getenv("BUCKET_NAME")
+
+VOICE_OPTIONS = ["autumn", "diana", "hannah", "austin", "daniel", "troy"]
 
 
-processor = None
-model = None
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+def generate_audio_file(text: str, voice_index: int):
+    if voice_index >= len(VOICE_OPTIONS):
+        raise ValueError("Invalid voice index")
 
-def load_model():
-    global processor, model
-    if processor is None or model is None:
-        processor = AutoProcessor.from_pretrained("suno/bark")
-        model = BarkModel.from_pretrained("suno/bark").to(device)
-        model.eval()
+    try:
+        response = client.audio.speech.create(
+            model="canopylabs/orpheus-v1-english",
+            voice=VOICE_OPTIONS[voice_index],
+            input=text,
+            response_format="wav"
+        )
 
+        audio_bytes = response.read() if hasattr(response, "read") else response
+        return audio_bytes
 
-VOICE_OPTIONS = [
-    "v2/en_speaker_6", "v2/en_speaker_9",
-    "v2/zh_speaker_0", "v2/zh_speaker_9",
-    "v2/fr_speaker_0", "v2/fr_speaker_1",
-    "v2/de_speaker_0", "v2/de_speaker_3",
-    "v2/hi_speaker_2", "v2/hi_speaker_0",
-    "v2/ja_speaker_2", "v2/ja_speaker_0",
-]
+    except Exception as e:
+        raise RuntimeError(f"Groq API Error: {str(e)}")
 
 
-def generate_audio_array(text: str, language: int):
-    load_model()
-
-    if language >= len(VOICE_OPTIONS):
-        raise ValueError("Invalid language index")
-
-    # audio_segments = []
-
-    # for segment in split_text(text):
-    #     try:
-    #         inputs = processor(
-    #             segment,
-    #             voice_preset=VOICE_OPTIONS[language],
-    #             return_tensors="pt"
-    #         ).to(device)
-
-    #         audio = model.generate(**inputs, min_eos_p=0.05)
-    #         audio_segments.append(audio.squeeze().cpu().numpy())
-
-    #     except Exception as e:
-    #         raise RuntimeError(f"Error generating audio: {str(e)}")
-    
-    
-    # try:
-    #     with torch.no_grad():  # ✅ huge optimization
-    #         for segment in split_text(text):
-    #             inputs = processor(
-    #                 segment,
-    #                 voice_preset=VOICE_OPTIONS[language],
-    #                 return_tensors="pt"
-    #             ).to(device)
-
-    #             audio = model.generate(**inputs,min_eos_p=0.05)
-    #             audio_segments.append(audio.squeeze().cpu().numpy())
-
-    # except Exception as e:
-    #     raise RuntimeError(f"Error generating audio: {str(e)}")
-
-    # if not audio_segments:
-    #     raise ValueError("No audio generated from input text")
-
-    # return np.concatenate(audio_segments)
-    
-    inputs = processor(
-                    text,
-                    voice_preset=VOICE_OPTIONS[language],
-                    return_tensors="pt"
-                ).to(device)
-
-    audio = model.generate(**inputs)
-    audio_array = audio.squeeze().cpu().numpy()
-
-    return audio_array
-
-def save_audio_file(email: str, audio_array: np.ndarray):
+def save_audio_file(audio_bytes: bytes):
     os.makedirs(BASE_OUTPUT_DIR, exist_ok=True)
 
     unique_id = str(uuid.uuid4())
-    wav_path = os.path.join(BASE_OUTPUT_DIR, f"{unique_id}.wav")
     mp3_path = os.path.join(BASE_OUTPUT_DIR, f"{unique_id}.mp3")
 
-    try:
-        sample_rate = model.generation_config.sample_rate
+    with open(mp3_path, "wb") as f:
+        f.write(audio_bytes)
 
-        # Save WAV
-        wavfile.write(wav_path, rate=sample_rate, data=audio_array)
-
-        # Convert to MP3
-        sound = AudioSegment.from_wav(wav_path)
-        sound.export(mp3_path, format="mp3")
-
-        # Remove temp wav
-        os.remove(wav_path)
-
-        return mp3_path
-
-    except Exception as e:
-        raise RuntimeError(f"Error saving audio: {str(e)}")
-
-
-# s3_client = boto3.client(
-#     "s3",
-#     config=Config(signature_version="s3v4"),
-#     region_name=AWS_REGION,
-#     aws_access_key_id=AWS_ACCESS_KEY,
-#     aws_secret_access_key=AWS_SECRET_KEY,
-# )
-
-# def upload_to_s3(file_path: str, email: str):
-#     if not BUCKET_NAME:
-#         raise ValueError("BUCKET_NAME not set in environment")
-
-#     file_name = os.path.basename(file_path)
-#     s3_key = f"tts/{email}/{file_name}"
-
-#     try:
-#         s3_client.upload_file(file_path, BUCKET_NAME, s3_key)
-
-#         url = s3_client.generate_presigned_url(
-#             "get_object",
-#             Params={"Bucket": BUCKET_NAME, "Key": s3_key},
-#             ExpiresIn=3600
-#         )
-
-#         return url
-
-#     except Exception as e:
-#         raise RuntimeError(f"S3 upload failed: {str(e)}")
+    return mp3_path
 
 
 def text_to_speech(email: str, text: str, language: int):
-    # if not verify_text(text):
-    #     raise HTTPException(status_code=400, detail="Unsafe content")
-
     try:
-        audio_array = generate_audio_array(text, language)
-        file_path = save_audio_file(email, audio_array)
-        # url = upload_to_s3(file_path, email)
+        start_time = time.perf_counter()
+
+        audio_bytes = generate_audio_file(text, language)
+        file_path = save_audio_file(audio_bytes)
+
+        time_taken = round(time.perf_counter() - start_time, 2)
 
         return {
             "status": "success",
-            "audio_url": file_path
+            "audio_url": file_path,
+            "time_taken": time_taken
         }
 
     except Exception as e:
